@@ -1,24 +1,197 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>SVS PREP Buff Sign-Up</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-<body>
+/* =========================
+   GLOBAL SAFE STATE
+========================= */
 
-<div id="app">
+let renderLock = false;
 
-  <h1>SVS PREP Buff Sign-Up</h1>
+let sessionId = localStorage.getItem("sessionId");
+if (!sessionId) {
+  sessionId = crypto.randomUUID();
+  localStorage.setItem("sessionId", sessionId);
+}
 
-  <div id="slotsContainer"></div>
+function getMyId() {
+  return sessionId;
+}
 
-  <div id="confirmBar">
-    <button id="confirmBtn">Confirm</button>
-  </div>
+/* =========================
+   RENDER SLOTS (FIXED)
+========================= */
 
-</div>
+async function renderSlots() {
 
-<script src="app.js"></script>
-</body>
-</html>
+  if (renderLock) return;
+  renderLock = true;
+
+  try {
+
+    const container = document.getElementById('slotsContainer');
+    const summaryEl = document.getElementById('daySummary');
+
+    document.getElementById('confirmBar').style.display = 'none';
+
+    container.className = 'loading';
+    container.textContent = 'Loading slots...';
+
+    const day = DAYS.find(d => d.key === currentDay);
+
+    const freshBookings = await loadBookings(currentDay);
+    bookings = freshBookings;
+
+    const takenCount = Object.keys(bookings).length;
+    const openCount = day.slots.length - takenCount;
+
+    summaryEl.innerHTML = `
+      <span class="label">${day.label}, ${day.buff}</span>
+      <span class="count">${openCount} of ${day.slots.length} slots open</span>
+    `;
+
+    container.className = 'grid';
+
+    container.innerHTML = day.slots.map((slot) => {
+
+      const booking = bookings[slot];
+      const isMine = booking && booking.sessionId === getMyId();
+      const isSelected = slot === selectedSlot;
+
+      let cls = 'slot';
+
+      if (booking && isMine) {
+        cls += isSelected ? ' mine selected' : ' mine';
+      } else if (booking) {
+        cls += ' taken';
+      } else if (isSelected) {
+        cls += ' selected';
+      }
+
+      return `<div class="${cls}" data-slot="${slot}">${slot}</div>`;
+    }).join('');
+
+    container.querySelectorAll('.slot').forEach(el => {
+      el.addEventListener('click', async () => {
+
+        const slot = el.dataset.slot;
+
+        const freshBookings = await loadBookings(currentDay);
+        const booking = freshBookings[slot];
+
+        const isMine = booking && booking.sessionId === getMyId();
+
+        if (booking && !isMine) {
+          bookings = freshBookings;
+          renderSlots();
+          return;
+        }
+
+        selectedSlot = (selectedSlot === slot) ? null : slot;
+        renderSlots();
+      });
+    });
+
+    updateConfirmBar();
+
+  } finally {
+    renderLock = false;
+  }
+}
+
+/* =========================
+   TOAST
+========================= */
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+/* =========================
+   CONFIRM BOOKING (SAFE)
+========================= */
+
+document.getElementById('confirmBtn').addEventListener('click', async () => {
+
+  const btn = document.getElementById('confirmBtn');
+  if (btn.disabled) return;
+
+  const statusEl = document.getElementById('status');
+
+  const pseudo = document.getElementById('pseudo').value.trim();
+  const playerId = document.getElementById('playerId').value.trim();
+  const allianceSelect = document.getElementById('alliance').value;
+  const alliance = allianceSelect === 'OTHER'
+    ? document.getElementById('otherAlliance').value.trim()
+    : allianceSelect;
+
+  if (!pseudo) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Please enter your pseudo.';
+    return;
+  }
+
+  if (!playerId) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Please enter your ID.';
+    return;
+  }
+
+  if (!selectedSlot) {
+    statusEl.className = 'status err';
+    statusEl.textContent = 'Please select a slot first.';
+    return;
+  }
+
+  btn.disabled = true;
+  const originalText = btn.textContent;
+  btn.textContent = 'Please wait...';
+
+  try {
+
+    // 🔥 ANTI DOUBLE BOOK CHECK (IMPORTANT)
+    const fresh = await loadBookings(currentDay);
+
+    if (fresh[selectedSlot] && fresh[selectedSlot].sessionId !== getMyId()) {
+      statusEl.className = 'status err';
+      statusEl.textContent = 'This slot was just taken.';
+      await renderSlots();
+      return;
+    }
+
+    bookings = fresh;
+
+    bookings[selectedSlot] = {
+      pseudo,
+      playerId,
+      alliance,
+      sessionId: getMyId(),
+      ts: Date.now()
+    };
+
+    const ok = await saveBookings(currentDay, bookings);
+
+    if (ok) {
+      showToast(`Booked: ${selectedSlot}`);
+      statusEl.textContent = '';
+      selectedSlot = null;
+      await renderSlots();
+      await refreshBookedTabs?.();
+    } else {
+      statusEl.className = 'status err';
+      statusEl.textContent = 'Save failed. Try again.';
+    }
+
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
+/* =========================
+   INIT
+========================= */
+
+renderDayTabs();
+renderSlots();
+refreshBookedTabs?.();
+checkCurtain?.();
