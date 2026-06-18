@@ -1,1 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SVS PREP Buff Sign-Up</title>
 
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header class="main-header">
+    <h1>SVS PREP</h1>
+    <p>Buff Sign-Up</p>
+  </header>
+
+  <!-- CURTAIN -->
+  <div id="publicCurtain" class="curtain">
+    <div class="curtain-card">
+      <h2>Sign-ups are currently closed</h2>
+      <p>Please come back later.</p>
+      <button id="curtainAdminLink">Admin Access</button>
+    </div>
+  </div>
+
+  <!-- PLAYER PANEL -->
+  <section class="player-panel">
+
+    <!-- Alliance -->
+    <div class="input-group">
+      <label>Alliance</label>
+      <select id="alliance">
+        <option value="">Select alliance</option>
+        <option value="SUN">SUN</option>
+        <option value="CAT">CAT</option>
+        <option value="FFS">FFS</option>
+        <option value="ANG">ANG</option>
+        <option value="OTHER">OTHER</option>
+      </select>
+    </div>
+
+    <div id="otherField" class="hidden">
+      <div class="input-group">
+        <label>Alliance Name</label>
+        <input id="otherAlliance" type="text" placeholder="Enter alliance name"/>
+      </div>
+    </div>
+
+    <!-- Pseudo -->
+    <div class="input-group">
+      <label>Pseudo</label>
+      <input id="pseudo" type="text" placeholder="Enter pseudo"/>
+      <div id="pseudoSuggestions"></div>
+    </div>
+
+    <!-- Player ID -->
+    <div class="input-group">
+      <label>Player ID</label>
+      <input id="playerId" type="text" placeholder="Enter player ID"/>
+    </div>
+
+    <!-- DAY TABS -->
+    <div id="dayTabs" class="tabs"></div>
+
+    <!-- DAY SUMMARY -->
+    <div id="daySummary"></div>
+
+    <!-- SLOT CONTAINER -->
+    <div id="slotsContainer"></div>
+
+    <!-- CONFIRM BAR -->
+    <div id="confirmBar">
+      <button id="confirmBtn">Confirm Sign Up</button>
+    </div>
+
+    <!-- STATUS -->
+    <div id="status"></div>
+
+  </section>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmationModal" class="modal">
+  <div class="modal-card">
+    <button id="confirmationCloseBtn" class="close-btn">×</button>
+    <h2>Booking Confirmed</h2>
+    <div id="confirmationDetails"></div>
+  </div>
+</div>
+
+<!-- ADMIN LINK -->
+<div class="admin-link-wrap">
+  <a href="#" id="adminLink">Admin</a>
+</div>
+
+<!-- ADMIN OVERLAY -->
+<div id="adminOverlay" class="admin-overlay">
+
+  <div class="admin-modal">
+
+    <!-- LOGIN -->
+    <div id="adminLoginView">
+      <button id="adminCloseBtn1" class="close-btn">×</button>
+      <h2>Admin Login</h2>
+
+      <input id="adminPassword" type="password" placeholder="Password"/>
+      <button id="adminLoginBtn">Login</button>
+
+      <div id="adminLoginError"></div>
+    </div>
+
+    <!-- ADMIN DASHBOARD -->
+    <div id="adminListView" style="display:none;">
+      <button id="adminCloseBtn2" class="close-btn">×</button>
+
+      <h2>Admin Dashboard</h2>
+
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="signups">Signups</button>
+        <button class="admin-tab-btn" data-tab="overview">Overview</button>
+        <button class="admin-tab-btn" data-tab="history">History</button>
+        <button class="admin-tab-btn" data-tab="messages">Messages</button>
+        <button class="admin-tab-btn" data-tab="settings">Settings</button>
+      </div>
+
+      <!-- SIGNUPS -->
+      <div id="adminTabSignups">
+
+        <select id="adminDaySelect"></select>
+
+        <div id="adminListContent"></div>
+
+        <div class="admin-actions">
+          <button id="adminCopyBtn">Copy List</button>
+          <button id="adminScreenshotBtn">Screenshot View</button>
+        </div>
+
+        <hr>
+
+        <h3>Add Booking</h3>
+
+        <select id="adminAddSlot"></select>
+
+        <input id="adminAddPseudo" placeholder="Pseudo">
+        <input id="adminAddId" placeholder="Player ID">
+
+        <select id="adminAddAlliance">
+          <option value="SUN">SUN</option>
+          <option value="CAT">CAT</option>
+          <option value="FFS">FFS</option>
+          <option value="ANG">ANG</option>
+          <option value="OTHER">OTHER</option>
+        </select>
+
+        <div id="adminOtherField" class="hidden">
+          <input id="adminOtherAlliance" placeholder="Alliance name">
+        </div>
+
+        <button id="adminAddBtn">Add</button>
+
+        <div id="adminAddStatus"></div>
+      </div>
+      <!-- OVERVIEW -->
+      <div id="adminTabOverview" style="display:none;">
+        <div id="overviewContent"></div>
+        <button id="overviewCopyBtn">Copy Full Week</button>
+      </div>
+
+      <!-- HISTORY -->
+      <div id="adminTabHistory" style="display:none;">
+        <div class="history-filters">
+          <select id="historyFilterType">
+            <option value="all">All Actions</option>
+            <option value="confirm">Confirm</option>
+            <option value="cancel">Cancel</option>
+          </select>
+
+          <select id="historyFilterResult">
+            <option value="all">All Results</option>
+            <option value="success">Success</option>
+            <option value="failed">Failed</option>
+          </select>
+        </div>
+
+        <div id="historyContent"></div>
+      </div>
+
+      <!-- MESSAGES -->
+      <div id="adminTabMessages" style="display:none;">
+        <div id="messageBlocks"></div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div id="adminTabSettings" style="display:none;">
+
+        <div class="settings-block">
+          <h3>Sign-up Curtain</h3>
+
+          <div id="curtainSwitch" class="curtain-switch"></div>
+
+          <div id="curtainStatusBadge"></div>
+        </div>
+
+        <div class="settings-block">
+          <h3>Change Admin Password</h3>
+
+          <input id="newPasswordInput" type="password" placeholder="New password">
+          <button id="changePasswordBtn">Update Password</button>
+
+          <div id="passwordChangeStatus"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- SCREENSHOT OVERLAY -->
+<div id="screenshotOverlay" class="screenshot-overlay" style="display:none;">
+  <div class="screenshot-card">
+    <button id="screenshotCloseBtn" class="close-btn">×</button>
+    <h2 id="screenshotTitle"></h2>
+    <div id="screenshotContent"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
