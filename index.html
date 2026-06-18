@@ -1,197 +1,192 @@
-/* =========================
-   GLOBAL SAFE STATE
-========================= */
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SVS PREP Buff Sign-Up</title>
 
-let renderLock = false;
-
-let sessionId = localStorage.getItem("sessionId");
-if (!sessionId) {
-  sessionId = crypto.randomUUID();
-  localStorage.setItem("sessionId", sessionId);
+<style>
+:root{
+  --bg:#0b1220;
+  --panel:#111a2e;
+  --text:#e7eefc;
+  --muted:#93a4c7;
+  --gold:#f5c542;
+  --danger:#ff4d4d;
+  --ok:#3ddc97;
+  --border:rgba(255,255,255,0.08);
 }
 
-function getMyId() {
-  return sessionId;
+body{
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:var(--bg);
+  color:var(--text);
 }
 
-/* =========================
-   RENDER SLOTS (FIXED)
-========================= */
+/* layout */
+.container{max-width:1100px;margin:auto;padding:16px;}
+.header{font-size:20px;font-weight:700;color:var(--gold);margin-bottom:10px}
 
-async function renderSlots() {
-
-  if (renderLock) return;
-  renderLock = true;
-
-  try {
-
-    const container = document.getElementById('slotsContainer');
-    const summaryEl = document.getElementById('daySummary');
-
-    document.getElementById('confirmBar').style.display = 'none';
-
-    container.className = 'loading';
-    container.textContent = 'Loading slots...';
-
-    const day = DAYS.find(d => d.key === currentDay);
-
-    const freshBookings = await loadBookings(currentDay);
-    bookings = freshBookings;
-
-    const takenCount = Object.keys(bookings).length;
-    const openCount = day.slots.length - takenCount;
-
-    summaryEl.innerHTML = `
-      <span class="label">${day.label}, ${day.buff}</span>
-      <span class="count">${openCount} of ${day.slots.length} slots open</span>
-    `;
-
-    container.className = 'grid';
-
-    container.innerHTML = day.slots.map((slot) => {
-
-      const booking = bookings[slot];
-      const isMine = booking && booking.sessionId === getMyId();
-      const isSelected = slot === selectedSlot;
-
-      let cls = 'slot';
-
-      if (booking && isMine) {
-        cls += isSelected ? ' mine selected' : ' mine';
-      } else if (booking) {
-        cls += ' taken';
-      } else if (isSelected) {
-        cls += ' selected';
-      }
-
-      return `<div class="${cls}" data-slot="${slot}">${slot}</div>`;
-    }).join('');
-
-    container.querySelectorAll('.slot').forEach(el => {
-      el.addEventListener('click', async () => {
-
-        const slot = el.dataset.slot;
-
-        const freshBookings = await loadBookings(currentDay);
-        const booking = freshBookings[slot];
-
-        const isMine = booking && booking.sessionId === getMyId();
-
-        if (booking && !isMine) {
-          bookings = freshBookings;
-          renderSlots();
-          return;
-        }
-
-        selectedSlot = (selectedSlot === slot) ? null : slot;
-        renderSlots();
-      });
-    });
-
-    updateConfirmBar();
-
-  } finally {
-    renderLock = false;
-  }
+/* grid slots */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(90px,1fr));
+  gap:8px;
 }
 
-/* =========================
-   TOAST
-========================= */
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3200);
+.slot{
+  padding:10px;
+  border:1px solid var(--border);
+  text-align:center;
+  cursor:pointer;
+  border-radius:8px;
+  background:var(--panel);
+  font-size:13px;
 }
 
-/* =========================
-   CONFIRM BOOKING (SAFE)
-========================= */
+.slot.taken{opacity:.4;cursor:not-allowed}
+.slot.selected{outline:2px solid var(--gold)}
+.slot.mine{border:1px solid var(--ok)}
 
-document.getElementById('confirmBtn').addEventListener('click', async () => {
+button{
+  padding:10px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
 
-  const btn = document.getElementById('confirmBtn');
-  if (btn.disabled) return;
+.primary{background:var(--gold);color:#000;font-weight:700}
 
-  const statusEl = document.getElementById('status');
+/* mobile */
+@media(max-width:600px){
+  .grid{grid-template-columns:repeat(4,1fr);}
+}
+</style>
+</head>
 
-  const pseudo = document.getElementById('pseudo').value.trim();
-  const playerId = document.getElementById('playerId').value.trim();
-  const allianceSelect = document.getElementById('alliance').value;
-  const alliance = allianceSelect === 'OTHER'
-    ? document.getElementById('otherAlliance').value.trim()
-    : allianceSelect;
+<body>
+<div class="container">
 
-  if (!pseudo) {
-    statusEl.className = 'status err';
-    statusEl.textContent = 'Please enter your pseudo.';
-    return;
-  }
+  <div class="header">SVS PREP Buff Sign-Up</div>
 
-  if (!playerId) {
-    statusEl.className = 'status err';
-    statusEl.textContent = 'Please enter your ID.';
-    return;
-  }
+  <div id="summary"></div>
 
-  if (!selectedSlot) {
-    statusEl.className = 'status err';
-    statusEl.textContent = 'Please select a slot first.';
-    return;
-  }
+  <div id="slots" class="grid"></div>
 
-  btn.disabled = true;
-  const originalText = btn.textContent;
-  btn.textContent = 'Please wait...';
+  <br/>
 
-  try {
+  <input id="pseudo" placeholder="Pseudo" style="width:100%;padding:10px;margin-bottom:8px"/>
+  <input id="playerId" placeholder="ID" style="width:100%;padding:10px;margin-bottom:8px"/>
 
-    // 🔥 ANTI DOUBLE BOOK CHECK (IMPORTANT)
-    const fresh = await loadBookings(currentDay);
+  <select id="alliance" style="width:100%;padding:10px;margin-bottom:8px">
+    <option value="SUN">SUN</option>
+    <option value="CAT">CAT</option>
+    <option value="ANG">ANG</option>
+    <option value="FFS">FFS</option>
+    <option value="OTHER">OTHER</option>
+  </select>
 
-    if (fresh[selectedSlot] && fresh[selectedSlot].sessionId !== getMyId()) {
-      statusEl.className = 'status err';
-      statusEl.textContent = 'This slot was just taken.';
-      await renderSlots();
-      return;
-    }
+  <input id="otherAlliance" placeholder="Autre alliance" style="display:none;width:100%;padding:10px;margin-bottom:8px"/>
 
-    bookings = fresh;
+  <button class="primary" onclick="confirm()">CONFIRMER</button>
 
-    bookings[selectedSlot] = {
-      pseudo,
-      playerId,
-      alliance,
-      sessionId: getMyId(),
-      ts: Date.now()
+  <p id="status"></p>
+
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
+
+let slots = ["23:45","00:15","00:45","01:15","01:45","02:15","02:45"];
+let currentDay = "mon";
+let bookings = {};
+let selectedSlot = null;
+
+/* ---------------- API ---------------- */
+async function load(){
+  const res = await fetch(`${API_URL}?day=${currentDay}`);
+  bookings = await res.json();
+  render();
+}
+
+async function save(data){
+  return fetch(API_URL,{
+    method:"POST",
+    body: JSON.stringify(data)
+  }).then(r=>r.json());
+}
+
+/* ---------------- UI ---------------- */
+function render(){
+  const grid = document.getElementById("slots");
+  grid.innerHTML = "";
+
+  slots.forEach(s=>{
+    const b = bookings[s];
+
+    const div = document.createElement("div");
+    div.className = "slot";
+
+    if(b) div.classList.add("taken");
+    if(selectedSlot === s) div.classList.add("selected");
+
+    div.innerText = s;
+
+    div.onclick = ()=>{
+      if(b) return;
+      selectedSlot = s;
+      render();
     };
 
-    const ok = await saveBookings(currentDay, bookings);
+    grid.appendChild(div);
+  });
+}
 
-    if (ok) {
-      showToast(`Booked: ${selectedSlot}`);
-      statusEl.textContent = '';
-      selectedSlot = null;
-      await renderSlots();
-      await refreshBookedTabs?.();
-    } else {
-      statusEl.className = 'status err';
-      statusEl.textContent = 'Save failed. Try again.';
-    }
+async function confirm(){
+  const pseudo = document.getElementById("pseudo").value.trim();
+  const playerId = document.getElementById("playerId").value.trim();
+  const allianceSel = document.getElementById("alliance").value;
+  const other = document.getElementById("otherAlliance").value.trim();
 
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
+  if(!pseudo || !playerId || !selectedSlot){
+    return show("Champs manquants");
   }
+
+  const alliance = allianceSel === "OTHER" ? other : allianceSel;
+
+  const payload = {
+    day: currentDay,
+    slot: selectedSlot,
+    pseudo,
+    playerId,
+    alliance,
+    ts: Date.now()
+  };
+
+  const res = await save(payload);
+
+  if(res.success){
+    show("OK confirmé");
+    selectedSlot = null;
+    load();
+  }else{
+    show(res.error || "Erreur");
+  }
+}
+
+function show(t){
+  document.getElementById("status").innerText = t;
+}
+
+/* UI logic */
+document.getElementById("alliance").addEventListener("change",(e)=>{
+  document.getElementById("otherAlliance").style.display =
+    e.target.value === "OTHER" ? "block":"none";
 });
 
-/* =========================
-   INIT
-========================= */
+load();
+</script>
 
-renderDayTabs();
-renderSlots();
-refreshBookedTabs?.();
-checkCurtain?.();
+</body>
+</html>
