@@ -57,4 +57,4 @@ document.getElementById("confirmBtn").onclick = async () => {
   renderSlots();
 };
 
-renderSlots();v
+renderSlots();
